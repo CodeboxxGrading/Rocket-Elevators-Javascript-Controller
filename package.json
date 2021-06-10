@@ -1,0 +1,14 @@
+{
+  "name": "rocket-elevators-javascript-controller",
+  "version": "1.0.0",
+  "description": "",
+  "main": "residential_controller.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "",
+  "dependencies": {
+    "jest": "^27.0.3",
+    "lodash": "^4.17.21"
+  }
+}
