@@ -1,17 +1,16 @@
-
-
 // const { expect } = require('@jest/globals')
 var _ = require('lodash');
-const {Column, Elevator, CallButton, FloorRequestButton, Door}  = require('./residential_controller.js')
+const { Column, Elevator, CallButton, FloorRequestButton, Door } = require('./residential_controller.js')
 
-const scenario = (column,requestedFloor, direction, destination) => {
-    let tempColumn =  _.cloneDeep(column);
+const scenario = (column, requestedFloor, direction, destination) => {
+    let tempColumn = _.cloneDeep(column);
     let selectedElevator = tempColumn.requestElevator(requestedFloor, direction)
     let pickedUpUser = false
     if (selectedElevator.currentFloor == requestedFloor) {
-        pickedUpUser = true 
+        pickedUpUser = true
     }
     selectedElevator.requestFloor(destination)
+    moveAllElevators(tempColumn)
 
     for (let i = 0; i < tempColumn.elevatorList.length; i++) {
         if (tempColumn.elevatorList[i].ID == selectedElevator.ID) {
@@ -38,11 +37,11 @@ const moveAllElevators = (column) => {
 }
 
 describe('ResidentialController', () => {
-    let column = new Column(1,10,2)
+    let column = new Column(1, 10, 2)
 
     describe("Column's attributes and methods", () => {
 
-        it('Instantiates a Column with valid attributes', () => { 
+        it('Instantiates a Column with valid attributes', () => {
             expect(column instanceof Column).toBe(true)
             expect(column.ID).toEqual(1)
             expect(column.status).not.toBeNull()
@@ -66,7 +65,7 @@ describe('ResidentialController', () => {
     describe("Elevator's attributes and methods", () => {
         const elevator = new Elevator(1, 10)
 
-        it('Instantiates an Elevator with valid attributes', () => { 
+        it('Instantiates an Elevator with valid attributes', () => {
             expect(elevator instanceof Elevator).toBe(true)
             expect(elevator.ID).toEqual(1)
             expect(elevator.status).not.toBeNull()
@@ -79,12 +78,16 @@ describe('ResidentialController', () => {
             expect(typeof elevator.requestFloor).toEqual("function")
         })
 
+        it('Has a move method', () => {
+            expect(typeof elevator.move).toEqual("function")
+        })
+
     })
 
     describe("CallButton's attributes", () => {
         const callButton = new CallButton(1, 1, 'up')
 
-        it('Instantiates a CallButton with valid attributes', () => { 
+        it('Instantiates a CallButton with valid attributes', () => {
             expect(callButton instanceof CallButton).toBe(true)
 
             expect(callButton.ID).toEqual(1)
@@ -118,7 +121,7 @@ describe('ResidentialController', () => {
         })
     })
 
-    describe("Functional Scenario 1 reaches the expected outcome", () => { 
+    describe("Functional Scenario 1 reaches the expected outcome", () => {
         let results;
         beforeAll(() => {
             column.elevatorList[0].currentFloor = 2
@@ -136,7 +139,7 @@ describe('ResidentialController', () => {
         test("Part 1 of scenario 1 picks up the user", () => {
             expect(results.pickedUpUser).toBe(true)
         })
-        
+
         test("Part 1 of scenario 1 brings the user to destination", () => {
             expect(results.selectedElevator.currentFloor).toEqual(7)
         })
@@ -147,7 +150,7 @@ describe('ResidentialController', () => {
         })
     })
 
-    describe("Functional Scenario 2 reaches the expected outcome", () => { 
+    describe("Functional Scenario 2 reaches the expected outcome", () => {
         let results1;
         let results2;
         let results3;
@@ -156,18 +159,18 @@ describe('ResidentialController', () => {
             column.elevatorList[0].status = 'idle'
             column.elevatorList[1].currentFloor = 3
             column.elevatorList[1].status = 'idle'
-    
+
             results1 = scenario(column, 1, 'up', 6)
-        
+
             column = results1.tempColumn // Update the column state with last scenario's result
-            
+
             results2 = scenario(column, 3, 'up', 5)
             column = results2.tempColumn // Update the column state with last scenario's result
-    
+
             results3 = scenario(column, 9, 'down', 2)
             column = results3.tempColumn // Update the column state with last scenario's result
         });
-       
+
         describe("Part 1 of scenario 2", () => {
             test("Part 1 of scenario 2 chooses the best elevator", () => {
                 expect(results1.selectedElevator.ID).toEqual(2)
@@ -176,7 +179,7 @@ describe('ResidentialController', () => {
             test("Part 1 of scenario 2 picks up the user", () => {
                 expect(results1.pickedUpUser).toBe(true)
             })
-            
+
             test("Part 1 of scenario 2 brings the user to destination", () => {
                 expect(results1.selectedElevator.currentFloor).toEqual(6)
             })
@@ -195,7 +198,7 @@ describe('ResidentialController', () => {
             test("Part 2 of scenario 2 picks up the user", () => {
                 expect(results2.pickedUpUser).toBe(true)
             })
-            
+
             test("Part 2 of scenario 2 brings the user to destination", () => {
                 expect(results2.selectedElevator.currentFloor).toEqual(5)
             })
@@ -214,7 +217,7 @@ describe('ResidentialController', () => {
             test("Part 3 of scenario 2 picks up the user", () => {
                 expect(results3.pickedUpUser).toBe(true)
             })
-            
+
             test("Part 3 of scenario 2 brings the user to destination", () => {
                 expect(results3.selectedElevator.currentFloor).toEqual(2)
             })
@@ -242,13 +245,11 @@ describe('ResidentialController', () => {
 
             column = results1.tempColumn // update the column state with last scenario's result
 
-            moveAllElevators(column) 
-
             results2 = scenario(column, 10, 'down', 3)
             column = results2.tempColumn // update the column state with last scenario's result
         })
 
-        
+
 
         describe("Part 1 of scenario 3", () => {
             test("Part 1 of scenario 3 chooses the best elevator", () => {
@@ -258,7 +259,7 @@ describe('ResidentialController', () => {
             test("Part 1 of scenario 3 picks up the user", () => {
                 expect(results1.pickedUpUser).toBe(true)
             })
-            
+
             test("Part 1 of scenario 3 brings the user to destination", () => {
                 expect(results1.selectedElevator.currentFloor).toEqual(2)
             })
@@ -277,7 +278,7 @@ describe('ResidentialController', () => {
             test("Part 2 of scenario 3 picks up the user", () => {
                 expect(results2.pickedUpUser).toBe(true)
             })
-            
+
             test("Part 2 of scenario 3 brings the user to destination", () => {
                 expect(results2.selectedElevator.currentFloor).toEqual(3)
             })
