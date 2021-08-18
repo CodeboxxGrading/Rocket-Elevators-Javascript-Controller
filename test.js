@@ -1,4 +1,3 @@
-// const { expect } = require('@jest/globals')
 var _ = require('lodash');
 const { Column, Elevator, CallButton, FloorRequestButton, Door } = require('./residential_controller.js')
 
