@@ -1,6 +1,6 @@
 # Rocket-Elevators-Javascript-Controller
 This is the template to use for the javascript residential controller. You will find the classes that should be used along with some methods described in the requirements.
-The necessary files to run some tests are also present. With Node JS installed, first run:
+The necessary files to run some tests are also present. With Node JS and NPM installed, first run:
 
 `npm install`
 
