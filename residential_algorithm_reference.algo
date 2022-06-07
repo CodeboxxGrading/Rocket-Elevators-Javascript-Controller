@@ -1,0 +1,245 @@
+SET elevatorID TO 1
+SET floorRequestButtonID TO 1
+SET callButtonID TO 1
+
+DEFINE Column USING _id AND _status AND _amountOfFloors AND _amountOfElevators
+    SET ID TO _id
+    SET status TO _status 
+    SET amountOfFloors TO _amountOfFloors
+    SET amountOfElevators TO _amountOfElevators
+    SET elevatorsList TO EMPTY ARRAY
+    SET callButtonsList TO EMPTY ARRAY
+
+    CALL THIS createElevators USING _amountOfFloors AND _amountOfElevators 
+    CALL THIS createCallButtons USING _amountOfFloors
+
+    '//---------------------------------Methods--------------------------------------------//'
+    SEQUENCE createCallButtons USING _amountOfFloors
+        SET buttonFloor TO 1
+        
+        FOR _amountOfFloors
+            IF buttonFloor < _amountOfFloors THEN '//If it's not the last floor
+                SET callButton TO NEW CallButton WITH callButtonID AND OFF AND buttonFloor AND Up '//id, status, floor, direction
+                ADD callButton TO THIS callButtonsList
+                INCREMENT callButtonID
+            ENDIF
+
+            IF buttonFloor > 1 THEN '//If it's not the first floor
+                SET callButton TO NEW CallButton WITH callButtonID AND OFF AND buttonFloor AND Down '//id, status, floor, direction
+                ADD callButton TO THIS callButtonsList
+                INCREMENT callButtonID
+            ENDIF
+            INCREMENT buttonFloor
+        END FOR
+    ENDSEQUENCE
+
+    SEQUENCE createElevators USING  _amountOfFloors AND _amountOfElevators 
+        FOR _amountOfElevators
+            SET elevator TO NEW Elevator WITH elevatorID AND idle AND _amountOfFloors AND 1 '//id, status, amountOfFloors, currentFloor
+            ADD elevator TO THIS elevatorsList
+            INCREMENT elevatorID
+        ENDFOR
+    ENDSEQUENCE
+
+    '//Simulate when a user press a button outside the elevator
+    SEQUENCE requestElevator USING floor AND direction RETURNING elevator
+        SET elevator TO CALL THIS findElevator WITH floor AND direction RETURNING bestElevator
+        ADD floor TO elevator requestList 
+        CALL elevator move
+        CALL elevator operateDoors
+        RETURN elevator
+    ENDSEQUENCE
+
+    '//We use a score system depending on the current elevators state. Since the bestScore and the referenceGap are 
+    '//higher values than what could be possibly calculated, the first elevator will always become the default bestElevator, 
+    '//before being compared with to other elevators. If two elevators get the same score, the nearest one is prioritized.
+    SEQUENCE findElevator USING requestedFloor AND requestedDirection RETURNING bestElevator
+        INIT bestElevator
+        SET bestScore TO 5
+        SET referenceGap TO 10000000
+        INIT bestElevatorInformations
+
+        FOR EACH elevator IN THIS elevatorsList
+            '//The elevator is at my floor and going in the direction I want
+            IF requestedFloor EQUALS elevator currentFloor AND elevator status EQUALS stopped AND requestedDirection EQUALS elevator direction THEN
+                SET bestElevatorInformations TO CALL THIS checkIfElevatorIsBetter WITH 1 AND elevator AND bestScore AND referenceGap AND bestElevator AND requestedFloor RETURNING bestElevatorInformations
+            '//The elevator is lower than me, is coming up and I want to go up
+            ELSE IF requestedFloor IS GREATER THAN elevator currentFloor AND elevator direction EQUALS up AND requestedDirection EQUALS elevator direction THEN
+                SET bestElevatorInformations TO CALL THIS checkIfElevatorIsBetter WITH 2 AND elevator AND bestScore AND referenceGap AND bestElevator AND requestedFloor RETURNING bestElevatorInformations
+            '//The elevator is higher than me, is coming down and I want to go down
+            ELSE IF requestedFloor IS LESS THAN elevator currentFloor AND elevator direction EQUALS down AND requestedDirection EQUALS elevator direction THEN
+                SET bestElevatorInformations TO CALL THIS checkIfElevatorIsBetter WITH 2 AND elevator AND bestScore AND referenceGap AND bestElevator AND requestedFloor RETURNING bestElevatorInformations
+            '//The elevator is idle
+            ELSE IF elevator status EQUALS idle THEN
+                SET bestElevatorInformations TO CALL THIS checkIfElevatorIsBetter WITH 3 AND elevator AND bestScore AND referenceGap AND bestElevator AND requestedFloor RETURNING bestElevatorInformations
+            '//The elevator is not available, but still could take the call if nothing better is found
+            ELSE 
+                SET bestElevatorInformations TO CALL THIS checkIfElevatorIsBetter WITH 4 AND elevator AND bestScore AND referenceGap AND bestElevator AND requestedFloor RETURNING bestElevatorInformations
+            ENDIF
+            SET bestElevator TO bestElevatorInformations bestElevator
+            SET bestScore TO bestElevatorInformations bestScore
+            SET referenceGap TO bestElevatorInformations referenceGap
+        ENDFOR
+        RETURN bestElevator
+    ENDSEQUENCE
+
+    SEQUENCE checkIfElevatorIsBetter USING scoreToCheck AND newElevator AND bestScore AND referenceGap AND bestElevator AND floor RETURNING bestElevatorInformations
+        IF scoreToCheck IS LESS THAN bestScore THEN
+            SET bestScore TO scoreToCheck
+            SET bestElevator TO newElevator
+            SET referenceGap TO ABSOLUTE VALUE OF newElevator currentFloor - floor
+        ELSE IF bestScore EQUALS scoreToCheck
+            SET gap TO ABSOLUTE VALUE OF newElevator currentFloor - floor
+            IF referenceGap IS GREATER THAN gap THEN
+                SET bestElevator TO newElevator
+                SET referenceGap TO gap
+            ENDIF
+        ENDIF
+        RETURN bestElevator AND bestScore AND referenceGap AS bestElevatorInformations
+    ENDSEQUENCE
+
+ENDDEFINE '//Column
+
+DEFINE Elevator USING _id AND _status AND _amountOfFloors AND _currentFloor
+    SET ID TO _id
+    SET status TO _status
+    SET amountOfFloors TO _amountOfFloors
+    SET currentFloor TO _currentFloor
+    SET direction TO null
+    SET door TO NEW Door WITH _id AND closed
+    SET floorRequestsButtonsList TO EMPTY ARRAY
+    SET floorRequestList TO EMPTY ARRAY
+
+    CALL THIS createFloorRequestButtons WITH _amountOfFloors
+
+    SEQUENCE createFloorRequestButtons USING _amountOfFloors
+        SET buttonFloor TO 1
+        FOR _amountOfFloors
+            SET floorRequestButton TO NEW FloorRequestButton WITH floorRequestButtonID AND OFF AND buttonFloor '//id, status, floor
+            ADD floorRequestButton TO THIS floorButtonsList
+            INCREMENT buttonFloor
+            INCREMENT floorRequestButtonID
+        ENDFOR
+    ENDSEQUENCE
+
+    '//Simulate when a user press a button inside the elevator
+    SEQUENCE requestFloor USING floor
+        ADD floor TO THIS requestList
+        CALL THIS move
+        CALL THIS operateDoors
+    ENDSEQUENCE
+
+    SEQUENCE move 
+        WHILE THIS requestList IS NOT empty
+            SET destination TO first element of THIS requestList
+            SET THIS status TO moving
+            IF THIS currentFloor IS LESS THAN destination THEN
+                SET THIS direction TO up
+                CALL THIS sortFloorList
+                WHILE THIS currentFloor IS LESS THAN destination
+                    INCREMENT THIS currentFloor
+                    SET THIS screenDisplay TO THIS currentFloor
+                ENDWHILE
+            ELSE IF THIS currentFloor IS GREATER THAN destination THEN
+                SET THIS direction TO down
+                CALL THIS sortFloorList
+                WHILE THIS currentFloor IS GREATER THAN destination
+                    DECREMENT THIS currentFloor
+                    SET THIS screenDisplay TO THIS currentFloor
+                ENDWHILE
+            ENDIF
+            SET THIS status TO stopped
+            REMOVE first element OF THIS requestList
+        ENDWHILE
+        SET THIS status TO idle
+    ENDSEQUENCE
+
+    SEQUENCE sortFloorList
+        IF THIS direction IS up
+            SORT THIS requestList ASCENDING
+        ELSE 
+            SORT THIS requestList DESCENDING
+        ENDIF
+    ENDSEQUENCE
+
+    SEQUENCE operateDoors
+        SET THIS door status TO opened
+        WAIT 5 seconds
+        IF THIS IS NOT overweight
+            SET THIS door status TO closing
+            IF no obstruction
+                SET THIS door status TO closed
+            ELSE
+                CALL THIS operateDoors
+        ELSE
+            WHILE THIS IS overweight
+                Activate overweight alarm
+            ENDWHILE
+            CALL THIS operateDoors
+        ENDIF
+    ENDSEQUENCE
+
+ENDDEFINE '//Elevator
+
+DEFINE CallButton USING _id, _status, _floor, _direction
+    SET ID TO _id
+    SET status TO _status
+    SET floor TO _floor
+    SET direction TO _direction
+ENDDEFINE
+
+DEFINE FloorRequestButton USING _id, _status, _floor
+    SET ID TO _id
+    SET status TO _status
+    SET floor TO _floor
+ENDDEFINE
+
+DEFINE Door USING _id, _status
+    SET ID TO _id
+    SET status TO _status
+ENDDEFINE
+
+
+'==================================Scenario 1=================================================
+SET column TO NEW Column WITH 1 AND online AND 10 AND 2 '//id, status, amountOfFloors, amountOfElevators
+SET first elevator floor OF column elevatorsList TO 2
+SET second elevator floor OF column elevatorsList TO 6
+
+SET elevator TO CALL column requestElevator WITH 3 AND Up RETURNING elevator
+CALL elevator requestFloor WITH 7
+'==================================End Scenario 1=============================================
+
+
+'==================================Scenario 2=================================================
+SET column TO NEW Column WITH 1 AND online AND 10 AND 2 '//id, status, amountOfFloors, amountOfElevators
+SET first elevator floor OF column elevatorsList TO 10
+SET second elevator floor OF column elevatorsList TO 3
+
+'//Part 1
+SET elevator TO CALL column requestElevator WITH 1 AND Up RETURNING elevator
+CALL elevator requestFloor WITH 6
+
+'//Part 2
+SET elevator TO CALL column requestElevator WITH 3 AND Up RETURNING elevator
+CALL elevator requestFloor WITH 5
+
+'//Part 3
+SET elevator TO CALL column requestElevator WITH 9 AND Down RETURNING elevator
+CALL elevator requestFloor WITH 2
+'==================================End Scenario 2=============================================
+
+'==================================Scenario 3=================================================
+SET column TO NEW Column WITH 1 AND online AND 10 AND 2 '//id, status, amountOfFloors, amountOfElevators
+SET first elevator floor OF column elevatorsList TO 10
+SET second elevator floor OF column elevatorsList TO 3
+SET second elevator status OF column elevatorsList TO moving
+ADD 6 TO second elevator floorRequestList OF column elevatorsList
+
+'//Part 1
+SET elevator TO CALL column requestElevator WITH 3 AND Down RETURNING elevator
+CALL elevator requestFloor WITH 2
+
+'//Part 2
+SET elevator TO CALL column requestElevator WITH 10 AND Down RETURNING elevator
+CALL elevator requestFloor WITH 3
+'==================================End Scenario 3=============================================
