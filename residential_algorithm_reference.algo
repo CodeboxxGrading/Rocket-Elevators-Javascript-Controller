@@ -3,12 +3,10 @@ SET floorRequestButtonID TO 1
 SET callButtonID TO 1
 
 DEFINE Column USING _id AND _status AND _amountOfFloors AND _amountOfElevators
-    SET ID TO _id
-    SET status TO _status 
-    SET amountOfFloors TO _amountOfFloors
-    SET amountOfElevators TO _amountOfElevators
-    SET elevatorsList TO EMPTY ARRAY
-    SET callButtonsList TO EMPTY ARRAY
+    SET THIS ID TO _id
+    SET THIS status TO _status 
+    SET THIS elevatorList TO EMPTY ARRAY
+    SET THIS callButtonList TO EMPTY ARRAY
 
     CALL THIS createElevators USING _amountOfFloors AND _amountOfElevators 
     CALL THIS createCallButtons USING _amountOfFloors
@@ -101,14 +99,13 @@ DEFINE Column USING _id AND _status AND _amountOfFloors AND _amountOfElevators
 ENDDEFINE '//Column
 
 DEFINE Elevator USING _id AND _status AND _amountOfFloors AND _currentFloor
-    SET ID TO _id
-    SET status TO _status
-    SET amountOfFloors TO _amountOfFloors
-    SET currentFloor TO _currentFloor
-    SET direction TO null
-    SET door TO NEW Door WITH _id AND closed
-    SET floorRequestsButtonsList TO EMPTY ARRAY
-    SET floorRequestList TO EMPTY ARRAY
+    SET THIS ID TO _id
+    SET THIS status TO _status
+    SET THIS currentFloor TO _currentFloor
+    SET THIS direction TO null
+    SET THIS door TO NEW Door WITH _id AND closed
+    SET THIS floorRequestsButtonsList TO EMPTY ARRAY
+    SET THIS floorRequestList TO EMPTY ARRAY
 
     CALL THIS createFloorRequestButtons WITH _amountOfFloors
 
@@ -182,21 +179,21 @@ DEFINE Elevator USING _id AND _status AND _amountOfFloors AND _currentFloor
 ENDDEFINE '//Elevator
 
 DEFINE CallButton USING _id, _status, _floor, _direction
-    SET ID TO _id
-    SET status TO _status
-    SET floor TO _floor
-    SET direction TO _direction
+    SET THIS ID TO _id
+    SET THIS status TO _status
+    SET THIS floor TO _floor
+    SET THIS direction TO _direction
 ENDDEFINE
 
 DEFINE FloorRequestButton USING _id, _status, _floor
-    SET ID TO _id
-    SET status TO _status
-    SET floor TO _floor
+    SET THIS ID TO _id
+    SET THIS status TO _status
+    SET THIS floor TO _floor
 ENDDEFINE
 
 DEFINE Door USING _id, _status
-    SET ID TO _id
-    SET status TO _status
+    SET THIS ID TO _id
+    SET THIS status TO _status
 ENDDEFINE
 
 
